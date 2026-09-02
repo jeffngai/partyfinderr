@@ -2858,4 +2858,214 @@ adminView=function(){
 </script>
 
 <script>(function(){const b=score;score=function(e,s){const r=b(e,s);let n=r.n,why=[...(r.why||[])],raw=((s&&s.q)||'').toLowerCase(),txt=((e.cat||'')+' '+(typeof venueText==='function'?venueText(e):'')).toLowerCase();if(/indoor (?:play|playground)|indoor playground/.test(raw)&&/indoor play|playground/.test(txt)){n=Math.max(n,78);if(s&&s.city&&e.city===s.city)n=Math.min(99,n+16);why.push('Strong indoor-play match')}return {n,why:[...new Set(why)]}}})();</script>
+
+<script>
+/* v5.6.3 — image/PDF-aware pricing + food audit */
+(function(){
+  const VERIFIED_563='2026-09-02';
+
+  // Earl Anthony's Dublin Bowl — official birthday-page flyer contains the
+  // package price and inclusions even though the surrounding HTML does not.
+  PACKAGES.dublinbowl=[[
+    'Birthday Bowling Party',30,
+    '$30/child before 5 PM · $35/child starting at 5 PM · 8-child minimum · 2 hours',
+    [
+      '1 hour bowling + 1 hour party time',
+      'Bowling balls + shoes included',
+      'Ball ramps + bumpers on kids lanes',
+      'Choice of pizza for birthday guests',
+      'Unlimited soft drinks',
+      'Table coverings, plates, napkins, cups + utensils',
+      'Party attendant for setup, serving + cleanup',
+      'Keepsake bowling pin for guests to sign',
+      'Outside food not permitted except celebratory cake/cupcakes',
+      '48-hour cancellation/postponement notice required; otherwise $100 non-refundable fee'
+    ]
+  ]];
+  V45VERIFY.dublinbowl={status:'party_finder_verified',verifiedOn:VERIFIED_563,sourceType:'Official birthday page · package/food flyers embedded as images',source:'https://www.earlanthonysdublinbowl.com/Parties-Events/Birthday-Parties'};
+  FOODMODEL.dublinbowl={
+    mode:'included',
+    label:'Pizza + unlimited soft drinks included',
+    details:'Birthday package includes choice of pizza for birthday guests and unlimited soft drinks. Outside food/beverages are not allowed except celebratory cake/cupcakes.',
+    addOns:'Official party food sheet lists extra pizzas ($23–$36), soda pitchers ($8), appetizer platters ($45–$135), wing platters ($80/$150), salads ($25–$40), and fry bowls ($35–$45). Additional food requests require at least 24 hours notice.',
+    source:'https://www.earlanthonysdublinbowl.com/Parties-Events/Birthday-Parties'
+  };
+
+  // Edge Gymnastics — current official page exposes package pricing and BYO-food
+  // policy; retain the existing package prices and enrich the food model.
+  FOODMODEL.x2={mode:'byo',label:'Bring your own food + cake',details:'Food, cake/cupcakes and non-alcoholic beverages may be brought for the 45-minute celebration period. Two six-foot food tables are provided.',addOns:'No alcohol, glass, slime, balloons, pinatas or silly string.',source:'https://www.edge-gymnastics.com/birthday-party'};
+  V45VERIFY.x2={status:'party_finder_verified',verifiedOn:VERIFIED_563,sourceType:'Official birthday page · package pricing + FAQ',source:'https://www.edge-gymnastics.com/birthday-party'};
+
+  // Green Forest Art Studio — official page confirms BYO food/beverages.
+  FOODMODEL.x3={mode:'byo',label:'Bring your own food + drinks',details:'Families may bring cake, food and non-alcoholic beverages. Plates/cups/utensils are not supplied.',addOns:'Extra 30 minutes is $50.',source:'https://greenforestartstudio.com/art-birthday-parties/'};
+  V45VERIFY.x3={status:'party_finder_verified',verifiedOn:VERIFIED_563,sourceType:'Official birthday page · pricing + food policy',source:'https://greenforestartstudio.com/art-birthday-parties/'};
+
+  // Slime Kitchen — current official page publishes the formula even though the
+  // package cards are not fixed-price packages. Preserve formula-based True Cost.
+  PACKAGES.x9=[
+    ['Standard Experience',null,'Base fee + $45/child · 10-child minimum',['1 slime per child','Dedicated Party Head Chef(s)','Slime games','Celebrant label + gift bag','Cupcakes + drinks allowed']],
+    ['Expanded Experience',null,'Base fee + $55/child · 10-child minimum',['1 slime + 1 Skwishling per child','Dedicated Party Head Chef(s)','Slime games','Celebrant label + gift bag','Cupcakes + drinks allowed']]
+  ];
+  FOODMODEL.x9={mode:'byo',label:'Cupcakes + drinks allowed',details:'Families may bring cupcakes and drinks. Parties run 1–1.5 hours, or 2 hours with food.',addOns:'Additional plated food carries a $100 fee.',source:'https://theslimekitchen.com/visit-us/birthday-parties/'};
+  V45VERIFY.x9={status:'party_finder_verified',verifiedOn:VERIFIED_563,sourceType:'Official birthday page · formula pricing + food policy',source:'https://theslimekitchen.com/visit-us/birthday-parties/'};
+
+  // Keep language honest: only booking-flow prices should say live/current at booking.
+  if(typeof LIVE543!=='undefined'){
+    LIVE543.dublinbowl='$30/child · $35 after 5 PM';
+    LIVE543.x11='Contact My Gym for current pricing';
+  }
+
+  const minBefore563=packageMinGuests;
+  packageMinGuests=function(e,pkg){
+    if(e.id==='dublinbowl')return 8;
+    return minBefore563(e,pkg);
+  };
+
+  const tcBefore563=trueCostFor;
+  trueCostFor=function(e,s,pkgName,internal=false){
+    if(e.id==='dublinbowl'){
+      const pkg=packageInfo(e).find(x=>x[0]===pkgName)||packageInfo(e)[0];
+      const entered=(s&&s.hasKids)?s.k:null;
+      const kids=Math.max(entered||8,8);
+      // Date/time is not yet a first-class clock-time input in this alpha, so
+      // default to the published daytime rate and disclose the 5 PM rate.
+      const per=30;
+      const subtotal=kids*per;
+      return {pkg,modeledKids:kids,minGuests:8,base:subtotal,kidsExtra:0,fees:0,food:0,foodLabel:'Pizza + unlimited soft drinks included',total:subtotal,notes:['$35/child for parties starting at 5:00 PM or later','8-child minimum','Additional food available with 24-hour notice'],fm:foodModel(e),pricingNote:(entered&&entered<8)?`Priced at 8-child minimum (you entered ${entered})`:`Daytime estimate for ${kids} kids · after 5 PM: ${money(kids*35)} before tax`};
+    }
+    return tcBefore563(e,s,pkgName,internal);
+  };
+
+  window.PARTY_FINDER_SOURCE_AUDIT_563={
+    auditedOn:VERIFIED_563,
+    method:'Official HTML + linked PDFs + image/flyer content where discoverable',
+    corrected:["Earl Anthony's Dublin Bowl",'Edge Gymnastics','Green Forest Art Studio','The Slime Kitchen'],
+    imagePdfFlags:['TriValley Ice Dublin — official package details are image-based; booking flow remains source of current price','San Ramon aquatic picnic pricing — official page links a reservation packet; do not use stale 2018–19 PDF pricing','Granada Bowl — current 2025–26 official catering PDF captured for food add-ons; birthday bowling base package still requires current verification'],
+    rule:'Never infer unavailable pricing. Embedded images/PDFs must be checked before labeling a venue Contact for pricing.'
+  };
+
+  document.title='Party Finder Alpha v5.6.3';
+  document.querySelectorAll('.badge').forEach(b=>b.textContent='ALPHA v5.6.3');
+})();
+</script>
+
+<style>
+/* v5.6.4 — MVP park cleanup + real official-media rendering */
+.cardHero564{width:100%;height:150px;object-fit:cover;border-radius:14px;margin:0 0 12px;display:block;background:#f1eff7;border:1px solid #e7e1f2}
+.officialMedia564{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:10px 0}
+.officialMedia564 figure{margin:0;border:1px solid #e7e1f2;border-radius:14px;overflow:hidden;background:#faf9fd}
+.officialMedia564 img{display:block;width:100%;height:210px;object-fit:cover;background:#f1eff7}
+.officialMedia564 figcaption{padding:8px 9px;font-size:11px;color:#716b7d;line-height:1.35}
+.officialMedia564 .wide{grid-column:1/-1}
+.officialMedia564 .wide img{height:260px;object-fit:contain;background:#fff}
+.photoSource564{font-size:11px;color:#716b7d;margin-top:7px}
+.mvpParkNote564{background:#f5fbf7;border:1px solid #d9eee1;border-radius:12px;padding:10px 12px;margin:9px 0;font-size:12px;color:#315c43}
+@media(max-width:560px){.officialMedia564{grid-template-columns:1fr}.officialMedia564 .wide{grid-column:auto}.officialMedia564 img,.officialMedia564 .wide img{height:210px}}
+</style>
+<script>
+/* v5.6.4 — MVP: retain Emerald Glen, suppress low-information standalone parks,
+   and render real visuals from official venue/municipal sources. */
+(function(){
+  const VERIFIED_564='2026-09-02';
+
+  // Parks are still supported as party SETTINGS (mobile vendors / DIY builder),
+  // but standalone park venue listings are intentionally narrowed for MVP.
+  const PARK_IDS_564=new Set([
+    'srcp','alamo','butterfly','donbiddle','dublinsports','fallon','forestpark','heritagepark','kolb','positano','schaefer','shannonpark','wallis',
+    'creekside','bernal','valvistab','amadorpark','kenmercer','valvistaa',
+    'athan','rancho','valleyview','hiddenvalley','ramona','srsports','memorial','monarch','sunriseridge','critter',
+    'bigtrees','cayetano','independence','independencelower','independenceupper','knott','maynissen','maynissen1','maynissen2','maynissen3','pleasure','robertliv','robertson'
+  ]);
+  for(let i=E.length-1;i>=0;i--){if(PARK_IDS_564.has(E[i][0]))E.splice(i,1)}
+
+  // Emerald Glen is the MVP park exception: popular local option with strong,
+  // current official pricing, capacities and booking rules.
+  const erow=E.find(r=>r[0]==='emerald');
+  if(erow){
+    erow[1]='Emerald Glen Park — Picnic Party';
+    erow[4]='Park · Picnic · Splash · DIY';
+    erow[6]=17;
+    erow[7]=200;
+    erow[8]='Hands-on';
+    erow[9]='Reservable picnic area';
+    erow[10]=24;
+    erow[11]=36;
+    erow[12]=0;
+    erow[13]=true;
+  }
+  PACKAGES.emerald=[
+    ['Picnic Area E',36,'Dublin resident private-use rate · 4-hour minimum · capacity 24',['2 BBQs','No shade','BYO food/decor','No inflatable jump house']],
+    ['Picnic Area D',52,'Dublin resident private-use rate · 4-hour minimum · capacity 36',['5 BBQs','No shade','BYO food/decor','No inflatable jump house']],
+    ['Picnic Area B',72,'Dublin resident private-use rate · 4-hour minimum · capacity 48',['1 BBQ + 1 sink','Inflatable jump house permitted with approved vendor','BYO food/decor']],
+    ['Picnic Area A',84,'Dublin resident private-use rate · 4-hour minimum · capacity 56',['1 BBQ + 1 sink','Inflatable jump house permitted with approved vendor','BYO food/decor']],
+    ['Picnic Area C',144,'Dublin resident private-use rate · 4-hour minimum · capacity 96',['2 BBQs + 2 sinks','Inflatable jump house permitted with approved vendor','BYO food/decor']],
+    ['Picnic Areas A + B + C',300,'Dublin resident private-use rate · 4-hour minimum · capacity 200',['Combined group area','Inflatables permitted with approved vendor','4 BBQs + 4 sinks total','BYO food/decor']]
+  ];
+  V45VERIFY.emerald={status:'party_finder_verified',verifiedOn:VERIFIED_564,sourceType:'Official City of Dublin Emerald Glen picnic-area page',source:'https://www.dublin.ca.gov/2723/Emerald-Glen-Park'};
+  FOODMODEL.emerald={mode:'byo',label:'Bring your own food',details:'DIY picnic rental with permanent BBQs at all reservable areas. Bring your own food, cake, drinks and decorations subject to City rules.',addOns:'Inflatable jump houses are allowed only at Areas A, B and C and require an approved vendor. No waterslides or personal jumpers.',source:'https://www.dublin.ca.gov/2723/Emerald-Glen-Park'};
+
+  // These are direct assets served by the venue/municipal official websites.
+  // If a remote host blocks embedding, the source button still remains available.
+  window.OFFICIAL_MEDIA_564={
+    lost:{source:'https://ilovelostworlds.com/parties/',items:[
+      {src:'https://ilovelostworlds.com/assets/parties/hero.webp',alt:'Lost Worlds party venue',label:'Official Lost Worlds party photo'},
+      {src:'https://ilovelostworlds.com/assets/parties/covers/fossil.webp',alt:'Lost Worlds Fossil Fiesta attraction',label:'Official Lost Worlds package photo'}]},
+    pump:{source:'https://www.pumpitupparty.com/pleasanton-ca/',items:[
+      {src:'https://www.pumpitupparty.com/wp-content/themes/pump-it-up/images/PIU-Private-Bday-Partiespump-it-up-0001.jpg',alt:'Pump It Up birthday party',label:'Official Pump It Up birthday-party photo'}]},
+    k1:{source:'https://www.k1speed.com/dublin-location.html',items:[
+      {src:'https://www.k1speed.com/wp-content/uploads/2021/01/birthday-kart-mobile.jpg',alt:'K1 Speed birthday kart',label:'Official K1 Speed birthday image'},
+      {src:'https://www.k1speed.com/wp-content/uploads/2021/01/slide-3-karts.jpg',alt:'K1 Speed indoor go-kart track',label:'Official K1 Speed racing image'}]},
+    dublinbowl:{source:'https://www.earlanthonysdublinbowl.com/Parties-Events/Birthday-Parties',items:[
+      {src:'https://www.earlanthonysdublinbowl.com/Portals/0/BlockBuilderImages/408/Birthday%202026-27%20Flyer.jpg',alt:'Earl Anthony Dublin Bowl birthday party flyer',label:'Official 2026–27 birthday-party flyer',wide:true},
+      {src:'https://www.earlanthonysdublinbowl.com/Portals/0/BlockBuilderImages/408/Birthday%20Party%20Form%202026-27-1.jpg',alt:'Earl Anthony Dublin Bowl party food menu',label:'Official party food + reservation sheet',wide:true}]},
+    emerald:{source:'https://www.dublin.ca.gov/2723/Emerald-Glen-Park',items:[
+      {src:'https://www.dublin.ca.gov/ImageRepository/Document?documentID=44293',alt:'Emerald Glen Park official picnic area map',label:'Official City of Dublin Emerald Glen picnic-area map',wide:true}]}
+  };
+
+  function mediaFor564(id){return window.OFFICIAL_MEDIA_564[id]||null}
+  function mediaGallery564(id){
+    const m=mediaFor564(id);if(!m||!m.items?.length)return '';
+    return `<div class="officialMedia564">${m.items.map(x=>`<figure class="${x.wide?'wide':''}"><img src="${x.src}" alt="${x.alt}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('figure').style.display='none'"><figcaption>${x.label}</figcaption></figure>`).join('')}</div><a class="sourcebtn" href="${m.source}" target="_blank" rel="noopener">View Official Source →</a><div class="photoSource564">Photos/visuals are loaded from the venue or municipality's official website.</div>`;
+  }
+
+  function injectProfileMedia564(id){
+    const html=mediaGallery564(id);if(!html)return;
+    const boxes=[...mcontent.querySelectorAll('.box')];
+    let photo=boxes.find(b=>/Official Photos|Party Photos|Official photo gallery/i.test(b.textContent||''));
+    if(photo){photo.innerHTML=`<h3>📷 Official Photos</h3>${html}`;photo.classList.add('officialPhotos564')}
+    else {const first=mcontent.querySelector('.box');if(first)first.insertAdjacentHTML('afterend',`<div class="box officialPhotos564"><h3>📷 Official Photos</h3>${html}</div>`)}
+    if(id==='emerald'){
+      const first=mcontent.querySelector('.box');
+      if(first)first.insertAdjacentHTML('beforeend',`<div class="mvpParkNote564"><b>MVP park exception:</b> Emerald Glen remains searchable because it has current official reservation rates, capacities and party-use rules.</div>`)
+    }
+  }
+
+  const profileBase564=profile;
+  profile=function(id){profileBase564(id);injectProfileMedia564(id)};
+
+  // Add a real official thumbnail to result cards where an approved official
+  // visual is available, so photos are visible before opening venue details.
+  function decorateCards564(){
+    [...results.querySelectorAll('.card')].forEach(card=>{
+      if(card.querySelector('.cardHero564'))return;
+      const attr=card.getAttribute('onclick')||'';
+      const mm=attr.match(/profile\('([^']+)'\)/);if(!mm)return;
+      const m=mediaFor564(mm[1]);if(!m?.items?.length)return;
+      const img=document.createElement('img');img.className='cardHero564';img.src=m.items[0].src;img.alt=m.items[0].alt;img.loading='lazy';img.referrerPolicy='no-referrer';img.onerror=()=>img.remove();
+      card.insertBefore(img,card.firstChild);
+    });
+  }
+  const renderBase564=render;
+  render=function(){renderBase564();decorateCards564()};
+
+  // Admin transparency: park scope and media coverage are explicit MVP choices.
+  const adminBase564=adminView;
+  adminView=function(){adminBase564();mcontent.insertAdjacentHTML('afterbegin',`<div class="box"><div class="kind">v5.6.4 MVP CLEANUP</div><h3>Parks + Official Media</h3><div class="row"><span>Standalone parks retained</span><b>Emerald Glen only</b></div><div class="row"><span>Other parks</span><b>Available as party settings / builder context</b></div><div class="row"><span>Real official visuals wired</span><b>${Object.keys(OFFICIAL_MEDIA_564).length} high-priority listings</b></div><div class="tiny">Photo coverage expands only from venue/municipal official sources. No Google Images/Yelp/parent-photo scraping is used for MVP.</div></div>`)};
+
+  try{render()}catch(e){console.warn('v5.6.4 render refresh',e)}
+  document.title='Party Finder Alpha v5.6.4';
+  document.querySelectorAll('.badge').forEach(b=>b.textContent='ALPHA v5.6.4');
+})();
+</script>
+
 </body></html>
